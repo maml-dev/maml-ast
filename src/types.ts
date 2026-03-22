@@ -1,0 +1,104 @@
+export interface Position {
+  offset: number // 0-based byte offset
+  line: number // 1-based
+  column: number // 1-based
+}
+
+export interface Span {
+  start: Position
+  end: Position // exclusive (one past last char)
+}
+
+export interface StringNode {
+  type: 'String'
+  value: string
+  raw: string
+  span: Span
+}
+
+export interface RawStringNode {
+  type: 'RawString'
+  value: string
+  raw: string
+  span: Span
+}
+
+export interface IntegerNode {
+  type: 'Integer'
+  value: number | bigint
+  raw: string
+  span: Span
+}
+
+export interface FloatNode {
+  type: 'Float'
+  value: number
+  raw: string
+  span: Span
+}
+
+export interface BooleanNode {
+  type: 'Boolean'
+  value: boolean
+  span: Span
+}
+
+export interface NullNode {
+  type: 'Null'
+  value: null
+  span: Span
+}
+
+export interface IdentifierKey {
+  type: 'Identifier'
+  value: string
+  span: Span
+}
+
+export type KeyNode = IdentifierKey | StringNode
+
+export interface CommentNode {
+  type: 'Comment'
+  value: string
+  span: Span
+}
+
+export interface Property {
+  key: KeyNode
+  value: ValueNode
+  span: Span
+  leadingComments: CommentNode[]
+  trailingComment: CommentNode | null
+}
+
+export interface ObjectNode {
+  type: 'Object'
+  properties: Property[]
+  span: Span
+  innerComments: CommentNode[]
+}
+
+export interface ArrayNode {
+  type: 'Array'
+  elements: ValueNode[]
+  span: Span
+  innerComments: CommentNode[]
+}
+
+export type ValueNode =
+  | StringNode
+  | RawStringNode
+  | IntegerNode
+  | FloatNode
+  | BooleanNode
+  | NullNode
+  | ObjectNode
+  | ArrayNode
+
+export interface Document {
+  type: 'Document'
+  value: ValueNode
+  leadingComments: CommentNode[]
+  trailingComments: CommentNode[]
+  span: Span
+}

@@ -1,0 +1,8 @@
+import { parse, print } from './index.js'
+;(function () {
+  if (typeof globalThis !== 'undefined') return globalThis
+  if (typeof window !== 'undefined') return window
+  // @ts-ignore
+  if (typeof global !== 'undefined') return global
+  return Function('return this')()
+})().MAML = { parse, print }
