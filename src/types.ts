@@ -69,6 +69,7 @@ export interface Property {
   span: Span
   leadingComments: CommentNode[]
   trailingComment: CommentNode | null
+  emptyLineBefore: boolean
 }
 
 export interface ObjectNode {
@@ -83,6 +84,7 @@ export interface ArrayNode {
   elements: ValueNode[]
   span: Span
   innerComments: CommentNode[]
+  emptyLinesBefore: boolean[]
 }
 
 export type ValueNode =

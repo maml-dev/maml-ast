@@ -220,96 +220,154 @@ describe('raw field', () => {
   })
 })
 
-describe('comment attachment - document', () => {
-  test('leading comment on document', () => {
-    const doc = parse('# header\n42')
-    expect(doc.leadingComments.length).toBe(1)
-    expect(doc.leadingComments[0].value).toBe(' header')
+describe('comment attachment', () => {
+  describe('document', () => {
+    test('leading comment', () => {
+      const doc = parse('# header\n42')
+      expect(doc.leadingComments.length).toBe(1)
+      expect(doc.leadingComments[0].value).toBe(' header')
+    })
+
+    test('trailing comment', () => {
+      const doc = parse('42 # end')
+      expect(doc.trailingComments.length).toBe(1)
+      expect(doc.trailingComments[0].value).toBe(' end')
+    })
+
+    test('multiple leading comments', () => {
+      const doc = parse('# one\n# two\n42')
+      expect(doc.leadingComments.length).toBe(2)
+    })
+
+    test('no comments', () => {
+      const doc = parse('42')
+      expect(doc.leadingComments).toStrictEqual([])
+      expect(doc.trailingComments).toStrictEqual([])
+    })
   })
 
-  test('trailing comment on document', () => {
-    const doc = parse('42 # end')
-    expect(doc.trailingComments.length).toBe(1)
-    expect(doc.trailingComments[0].value).toBe(' end')
+  describe('object', () => {
+    test('leading comment on property', () => {
+      const doc = parse('{\n  # comment\n  a: 1\n}')
+      const obj = doc.value
+      expect(obj.properties[0].leadingComments.length).toBe(1)
+      expect(obj.properties[0].leadingComments[0].value).toBe(' comment')
+    })
+
+    test('trailing comment on property', () => {
+      const doc = parse('{\n  a: 1 # inline\n}')
+      const obj = doc.value
+      expect(obj.properties[0].trailingComment).not.toBeNull()
+      expect(obj.properties[0].trailingComment.value).toBe(' inline')
+    })
+
+    test('inner comment', () => {
+      const doc = parse('{\n  a: 1\n  # end\n}')
+      const obj = doc.value
+      expect(obj.innerComments.length).toBe(1)
+      expect(obj.innerComments[0].value).toBe(' end')
+    })
+
+    test('inner comment in empty object', () => {
+      const doc = parse('{\n  # empty\n}')
+      const obj = doc.value
+      expect(obj.innerComments.length).toBe(1)
+      expect(obj.innerComments[0].value).toBe(' empty')
+    })
+
+    test('leading and trailing on same property', () => {
+      const doc = parse('{\n  # lead\n  a: 1 # trail\n}')
+      const prop = doc.value.properties[0]
+      expect(prop.leadingComments.length).toBe(1)
+      expect(prop.leadingComments[0].value).toBe(' lead')
+      expect(prop.trailingComment.value).toBe(' trail')
+    })
+
+    test('comments between properties', () => {
+      const doc = parse('{\n  a: 1 # after a\n  # before b\n  b: 2\n}')
+      const props = doc.value.properties
+      expect(props[0].trailingComment.value).toBe(' after a')
+      expect(props[1].leadingComments[0].value).toBe(' before b')
+    })
   })
 
-  test('multiple leading comments', () => {
-    const doc = parse('# one\n# two\n42')
-    expect(doc.leadingComments.length).toBe(2)
-  })
+  describe('array', () => {
+    test('comments go to innerComments', () => {
+      const doc = parse('[\n  1 # one\n  2 # two\n]')
+      const arr = doc.value
+      expect(arr.innerComments.length).toBe(2)
+    })
 
-  test('no comments', () => {
-    const doc = parse('42')
-    expect(doc.leadingComments).toStrictEqual([])
-    expect(doc.trailingComments).toStrictEqual([])
+    test('inner comment in empty array', () => {
+      const doc = parse('[\n  # empty\n]')
+      const arr = doc.value
+      expect(arr.innerComments.length).toBe(1)
+      expect(arr.innerComments[0].value).toBe(' empty')
+    })
+
+    test('comment inside nested object in array', () => {
+      const doc = parse('[\n  {\n    # nested\n    a: 1\n  }\n]')
+      const arr = doc.value
+      expect(arr.innerComments.length).toBe(0)
+      const obj = arr.elements[0]
+      expect(obj.properties[0].leadingComments.length).toBe(1)
+      expect(obj.properties[0].leadingComments[0].value).toBe(' nested')
+    })
   })
 })
 
-describe('comment attachment - object', () => {
-  test('leading comment on property', () => {
-    const doc = parse('{\n  # comment\n  a: 1\n}')
-    const obj = doc.value
-    expect(obj.properties[0].leadingComments.length).toBe(1)
-    expect(obj.properties[0].leadingComments[0].value).toBe(' comment')
+describe('blank lines', () => {
+  describe('object', () => {
+    test('blank line between properties', () => {
+      const doc = parse('{\n  a: 1\n\n  b: 2\n}')
+      const props = doc.value.properties
+      expect(props[0].emptyLineBefore).toBe(false)
+      expect(props[1].emptyLineBefore).toBe(true)
+    })
+
+    test('no blank line between properties', () => {
+      const doc = parse('{\n  a: 1\n  b: 2\n}')
+      const props = doc.value.properties
+      expect(props[0].emptyLineBefore).toBe(false)
+      expect(props[1].emptyLineBefore).toBe(false)
+    })
+
+    test('blank line before comment group', () => {
+      const doc = parse('{\n  a: 1\n\n  # section\n  b: 2\n}')
+      const props = doc.value.properties
+      expect(props[1].emptyLineBefore).toBe(true)
+    })
+
+    test('nested object blank lines', () => {
+      const doc = parse('{\n  x: {\n    a: 1\n\n    b: 2\n  }\n}')
+      const inner = doc.value.properties[0].value
+      expect(inner.properties[0].emptyLineBefore).toBe(false)
+      expect(inner.properties[1].emptyLineBefore).toBe(true)
+    })
   })
 
-  test('trailing comment on property', () => {
-    const doc = parse('{\n  a: 1 # inline\n}')
-    const obj = doc.value
-    expect(obj.properties[0].trailingComment).not.toBeNull()
-    expect(obj.properties[0].trailingComment.value).toBe(' inline')
-  })
+  describe('array', () => {
+    test('blank line between elements', () => {
+      const doc = parse('[\n  1\n\n  2\n]')
+      const arr = doc.value
+      expect(arr.emptyLinesBefore).toStrictEqual([false, true])
+    })
 
-  test('inner comment in object', () => {
-    const doc = parse('{\n  a: 1\n  # end\n}')
-    const obj = doc.value
-    expect(obj.innerComments.length).toBe(1)
-    expect(obj.innerComments[0].value).toBe(' end')
-  })
+    test('no blank line between elements', () => {
+      const doc = parse('[\n  1\n  2\n]')
+      const arr = doc.value
+      expect(arr.emptyLinesBefore).toStrictEqual([false, false])
+    })
 
-  test('inner comment in empty object', () => {
-    const doc = parse('{\n  # empty\n}')
-    const obj = doc.value
-    expect(obj.innerComments.length).toBe(1)
-    expect(obj.innerComments[0].value).toBe(' empty')
-  })
+    test('nested array blank lines', () => {
+      const doc = parse('[\n  [\n    1\n\n    2\n  ]\n]')
+      const inner = doc.value.elements[0]
+      expect(inner.emptyLinesBefore).toStrictEqual([false, true])
+    })
 
-  test('leading and trailing on same property', () => {
-    const doc = parse('{\n  # lead\n  a: 1 # trail\n}')
-    const prop = doc.value.properties[0]
-    expect(prop.leadingComments.length).toBe(1)
-    expect(prop.leadingComments[0].value).toBe(' lead')
-    expect(prop.trailingComment.value).toBe(' trail')
-  })
-
-  test('comments between properties', () => {
-    const doc = parse('{\n  a: 1 # after a\n  # before b\n  b: 2\n}')
-    const props = doc.value.properties
-    expect(props[0].trailingComment.value).toBe(' after a')
-    expect(props[1].leadingComments[0].value).toBe(' before b')
-  })
-})
-
-describe('comment attachment - array', () => {
-  test('comments in array go to innerComments', () => {
-    const doc = parse('[\n  1 # one\n  2 # two\n]')
-    const arr = doc.value
-    expect(arr.innerComments.length).toBe(2)
-  })
-
-  test('inner comment in empty array', () => {
-    const doc = parse('[\n  # empty\n]')
-    const arr = doc.value
-    expect(arr.innerComments.length).toBe(1)
-    expect(arr.innerComments[0].value).toBe(' empty')
-  })
-
-  test('comment inside nested object in array', () => {
-    const doc = parse('[\n  {\n    # nested\n    a: 1\n  }\n]')
-    const arr = doc.value
-    expect(arr.innerComments.length).toBe(0)
-    const obj = arr.elements[0]
-    expect(obj.properties[0].leadingComments.length).toBe(1)
-    expect(obj.properties[0].leadingComments[0].value).toBe(' nested')
+    test('empty array has no emptyLinesBefore', () => {
+      const doc = parse('[]')
+      expect(doc.value.emptyLinesBefore).toStrictEqual([])
+    })
   })
 })

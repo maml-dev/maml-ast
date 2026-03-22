@@ -2,102 +2,254 @@ import { test, describe, expect } from 'vitest'
 import { parse, print } from '../build/index.js'
 
 describe('print', () => {
-  test('int', () => {
-    expect(print(parse('42'))).toStrictEqual('42')
+  describe('values', () => {
+    test('integer', () => {
+      expect(print(parse('42'))).toBe('42')
+    })
+
+    test('bigint', () => {
+      expect(print(parse('9007199254740992'))).toBe('9007199254740992')
+    })
+
+    test('float', () => {
+      expect(print(parse('1.5'))).toBe('1.5')
+    })
+
+    test('float exponent preserved', () => {
+      expect(print(parse('1e6'))).toBe('1e6')
+    })
+
+    test('boolean', () => {
+      expect(print(parse('true'))).toBe('true')
+    })
+
+    test('null', () => {
+      expect(print(parse('null'))).toBe('null')
+    })
+
+    test('string', () => {
+      expect(print(parse('"foo"'))).toBe('"foo"')
+    })
+
+    test('raw string', () => {
+      expect(print(parse('"""hello"""'))).toBe('"""hello"""')
+    })
   })
 
-  test('bigint', () => {
-    // Number.MAX_SAFE_INTEGER + 1
-    expect(print(parse('9007199254740992'))).toStrictEqual('9007199254740992')
+  describe('containers', () => {
+    test('array', () => {
+      expect(print(parse('[1, 2, 3]'))).toBe('[\n  1\n  2\n  3\n]')
+    })
+
+    test('empty array', () => {
+      expect(print(parse('[]'))).toBe('[]')
+    })
+
+    test('object', () => {
+      expect(print(parse('{foo: "foo", bar: "bar"}'))).toBe(
+        '{\n  foo: "foo"\n  bar: "bar"\n}',
+      )
+    })
+
+    test('object with quoted keys', () => {
+      expect(print(parse('{"foo bar": "value"}'))).toBe(
+        '{\n  "foo bar": "value"\n}',
+      )
+    })
+
+    test('empty object', () => {
+      expect(print(parse('{}'))).toBe('{}')
+    })
   })
 
-  test('float', () => {
-    expect(print(parse('1.5'))).toStrictEqual('1.5')
+  describe('comments', () => {
+    test('document leading comment', () => {
+      expect(print(parse('# header\n42'))).toBe('# header\n42')
+    })
+
+    test('document trailing comment', () => {
+      expect(print(parse('42 # end'))).toBe('42 # end')
+    })
+
+    test('object leading comments', () => {
+      const input = '{\n  # comment\n  a: 1\n}'
+      expect(print(parse(input))).toBe('{\n  # comment\n  a: 1\n}')
+    })
+
+    test('object multiple leading comments', () => {
+      const input = '{\n  # c1\n  # c2\n  a: 1\n}'
+      expect(print(parse(input))).toBe('{\n  # c1\n  # c2\n  a: 1\n}')
+    })
+
+    test('object trailing comment', () => {
+      const input = '{\n  a: 1 # inline\n}'
+      expect(print(parse(input))).toBe('{\n  a: 1 # inline\n}')
+    })
+
+    test('object inner comments', () => {
+      const input = '{\n  a: 1\n  # end\n}'
+      expect(print(parse(input))).toBe('{\n  a: 1\n  # end\n}')
+    })
+
+    test('array comments', () => {
+      const input = '[\n  1 # one\n  2 # two\n]'
+      expect(print(parse(input))).toBe('[\n  1\n  # one\n  2\n  # two\n]')
+    })
   })
 
-  test('boolean', () => {
-    expect(print(parse('true'))).toStrictEqual('true')
+  describe('blank lines', () => {
+    test('object blank lines between properties', () => {
+      const input = '{\n  a: 1\n\n  b: 2\n}'
+      expect(print(parse(input))).toBe('{\n  a: 1\n\n  b: 2\n}')
+    })
+
+    test('object no blank line between properties', () => {
+      const input = '{\n  a: 1\n  b: 2\n}'
+      expect(print(parse(input))).toBe('{\n  a: 1\n  b: 2\n}')
+    })
+
+    test('object blank line before comment', () => {
+      const input = '{\n  a: 1\n\n  # section\n  b: 2\n}'
+      expect(print(parse(input))).toBe('{\n  a: 1\n\n  # section\n  b: 2\n}')
+    })
+
+    test('array blank lines between elements', () => {
+      const input = '[\n  1\n  2\n\n  3\n]'
+      expect(print(parse(input))).toBe('[\n  1\n  2\n\n  3\n]')
+    })
+
+    test('array no blank line between elements', () => {
+      const input = '[\n  1\n  2\n  3\n]'
+      expect(print(parse(input))).toBe('[\n  1\n  2\n  3\n]')
+    })
   })
 
-  test('null', () => {
-    expect(print(parse('null'))).toStrictEqual('null')
-  })
+  describe('colors', () => {
+    const tag = (name) => (s) => `<${name}>${s}</${name}>`
 
-  test('string', () => {
-    expect(print(parse('"foo"'))).toStrictEqual('"foo"')
-  })
+    const allColors = {
+      string: tag('s'),
+      number: tag('n'),
+      boolean: tag('b'),
+      null: tag('x'),
+      key: tag('k'),
+      comment: tag('c'),
+      bracket: tag('br'),
+      colon: tag('co'),
+    }
 
-  test('array', () => {
-    expect(print(parse('[1, 2, 3]'))).toStrictEqual(`[\n  1\n  2\n  3\n]`)
-  })
+    test('string', () => {
+      expect(print(parse('"hi"'), { colors: allColors })).toBe('<s>"hi"</s>')
+    })
 
-  test('object', () => {
-    expect(print(parse('{foo: "foo", bar: "bar"}'))).toStrictEqual(
-      `{\n  foo: "foo"\n  bar: "bar"\n}`,
-    )
-  })
+    test('raw string', () => {
+      expect(print(parse('"""hi"""'), { colors: allColors })).toBe(
+        '<s>"""hi"""</s>',
+      )
+    })
 
-  test('object with quoted keys', () => {
-    expect(print(parse('{"foo bar": "value"}'))).toStrictEqual(
-      `{\n  "foo bar": "value"\n}`,
-    )
-  })
+    test('integer', () => {
+      expect(print(parse('42'), { colors: allColors })).toBe('<n>42</n>')
+    })
 
-  test('empty object', () => {
-    expect(print(parse('{}'))).toStrictEqual('{}')
-  })
+    test('float', () => {
+      expect(print(parse('1.5'), { colors: allColors })).toBe('<n>1.5</n>')
+    })
 
-  test('empty array', () => {
-    expect(print(parse('[]'))).toStrictEqual('[]')
-  })
+    test('boolean', () => {
+      expect(print(parse('true'), { colors: allColors })).toBe('<b>true</b>')
+    })
 
-  test('raw string round-trip', () => {
-    expect(print(parse('"""hello"""'))).toStrictEqual('"""hello"""')
-  })
+    test('null', () => {
+      expect(print(parse('null'), { colors: allColors })).toBe('<x>null</x>')
+    })
 
-  test('float exponent preserved', () => {
-    expect(print(parse('1e6'))).toStrictEqual('1e6')
-  })
+    test('object with key and colon', () => {
+      expect(print(parse('{a: 1}'), { colors: allColors })).toBe(
+        '<br>{</br>\n  <k>a</k><co>:</co> <n>1</n>\n<br>}</br>',
+      )
+    })
 
-  test('object with leading comments', () => {
-    const input = '{\n  # comment\n  a: 1\n}'
-    expect(print(parse(input))).toStrictEqual('{\n  # comment\n  a: 1\n}')
-  })
+    test('empty object', () => {
+      expect(print(parse('{}'), { colors: allColors })).toBe(
+        '<br>{</br><br>}</br>',
+      )
+    })
 
-  test('object with trailing comments', () => {
-    const input = '{\n  a: 1 # inline\n}'
-    expect(print(parse(input))).toStrictEqual('{\n  a: 1 # inline\n}')
-  })
+    test('array', () => {
+      expect(print(parse('[1]'), { colors: allColors })).toBe(
+        '<br>[</br>\n  <n>1</n>\n<br>]</br>',
+      )
+    })
 
-  test('object with inner comments', () => {
-    const input = '{\n  a: 1\n  # end\n}'
-    expect(print(parse(input))).toStrictEqual('{\n  a: 1\n  # end\n}')
-  })
+    test('empty array', () => {
+      expect(print(parse('[]'), { colors: allColors })).toBe(
+        '<br>[</br><br>]</br>',
+      )
+    })
 
-  test('document with leading comment', () => {
-    const input = '# header\n42'
-    expect(print(parse(input))).toStrictEqual('# header\n42')
-  })
+    test('document leading comment', () => {
+      expect(print(parse('# hdr\n42'), { colors: allColors })).toBe(
+        '<c># hdr</c>\n<n>42</n>',
+      )
+    })
 
-  test('document with trailing comment', () => {
-    const input = '42 # end'
-    expect(print(parse(input))).toStrictEqual('42 # end')
-  })
+    test('document trailing comment', () => {
+      expect(print(parse('42 # end'), { colors: allColors })).toBe(
+        '<n>42</n> <c># end</c>',
+      )
+    })
 
-  test('array with comments', () => {
-    const input = '[\n  1 # one\n  2 # two\n]'
-    expect(print(parse(input))).toStrictEqual(
-      '[\n  1\n  # one\n  2\n  # two\n]',
-    )
-  })
+    test('object leading comment', () => {
+      const input = '{\n  # c\n  a: 1\n}'
+      expect(print(parse(input), { colors: allColors })).toBe(
+        '<br>{</br>\n  <c># c</c>\n  <k>a</k><co>:</co> <n>1</n>\n<br>}</br>',
+      )
+    })
 
-  test('multiple leading comments', () => {
-    const input = '{\n  # c1\n  # c2\n  a: 1\n}'
-    expect(print(parse(input))).toStrictEqual('{\n  # c1\n  # c2\n  a: 1\n}')
+    test('object trailing comment', () => {
+      const input = '{\n  a: 1 # t\n}'
+      expect(print(parse(input), { colors: allColors })).toBe(
+        '<br>{</br>\n  <k>a</k><co>:</co> <n>1</n> <c># t</c>\n<br>}</br>',
+      )
+    })
+
+    test('object inner comment', () => {
+      const input = '{\n  a: 1\n  # end\n}'
+      expect(print(parse(input), { colors: allColors })).toBe(
+        '<br>{</br>\n  <k>a</k><co>:</co> <n>1</n>\n  <c># end</c>\n<br>}</br>',
+      )
+    })
+
+    test('array inner comment', () => {
+      const input = '[\n  1 # c\n]'
+      expect(print(parse(input), { colors: allColors })).toBe(
+        '<br>[</br>\n  <n>1</n>\n  <c># c</c>\n<br>]</br>',
+      )
+    })
+
+    test('quoted key', () => {
+      expect(print(parse('{"a b": 1}'), { colors: allColors })).toBe(
+        '<br>{</br>\n  <k>"a b"</k><co>:</co> <n>1</n>\n<br>}</br>',
+      )
+    })
+
+    test('partial colors only applies provided', () => {
+      const partial = { key: tag('k') }
+      expect(print(parse('{a: 1}'), { colors: partial })).toBe(
+        '{\n  <k>a</k>: 1\n}',
+      )
+    })
+
+    test('no options same as plain print', () => {
+      const input = '{a: 1}'
+      expect(print(parse(input))).toBe(print(parse(input), {}))
+      expect(print(parse(input))).toBe(print(parse(input), { colors: {} }))
+    })
   })
 
   test('print raw ValueNode (not Document)', () => {
     const doc = parse('42')
-    expect(print(doc.value)).toStrictEqual('42')
+    expect(print(doc.value)).toBe('42')
   })
 })

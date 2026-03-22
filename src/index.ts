@@ -18,6 +18,7 @@ export type {
 } from './types.js'
 export { parse } from './parse.js'
 export { print } from './print.js'
+export type { PrintOptions, PrintColors } from './print.js'
 
 import type { ValueNode, Document } from './types.js'
 

@@ -14,7 +14,7 @@ function parse(source) {
     trailingComments: [],
     span: { start: docStart, end: docEnd }
   };
-  return attachComments(doc, comments, source), doc;
+  return attachComments(doc, comments, source), attachBlankLines(doc.value, source), doc;
   function next() {
     pos < source.length ? (ch = source[pos], pos++, ch === `
 ` ? (lineNumber++, columnNumber = 0) : columnNumber++) : (ch = "", done = !0);
@@ -169,7 +169,8 @@ function parse(source) {
         value: value2,
         span: propSpan,
         leadingComments: [],
-        trailingComment: null
+        trailingComment: null,
+        emptyLineBefore: !1
       });
       let newlineAfterValue = skipWhitespace();
       if (ch === "}") {
@@ -222,7 +223,8 @@ function parse(source) {
         type: "Array",
         elements,
         span: { start, end },
-        innerComments: []
+        innerComments: [],
+        emptyLinesBefore: []
       };
     }
     for (; ; ) {
@@ -236,7 +238,8 @@ function parse(source) {
           type: "Array",
           elements,
           span: { start, end },
-          innerComments: []
+          innerComments: [],
+          emptyLinesBefore: []
         };
       } else if (ch === ",") {
         if (next(), skipWhitespace(), ch === "]") {
@@ -246,7 +249,8 @@ function parse(source) {
             type: "Array",
             elements,
             span: { start, end },
-            innerComments: []
+            innerComments: [],
+            emptyLinesBefore: []
           };
         }
       } else {
@@ -331,6 +335,31 @@ function hasNewlineBetween(source, from, to) {
 `) return !0;
   return !1;
 }
+function hasBlankLine(source, from, to) {
+  let afterNewline = !1;
+  for (let i = from; i < to; i++)
+    if (source[i] === `
+`) {
+      if (afterNewline) return !0;
+      afterNewline = !0;
+    } else source[i] !== " " && source[i] !== "	" && source[i] !== "\r" && (afterNewline = !1);
+  return !1;
+}
+function attachBlankLines(node, source) {
+  if (node.type === "Object") {
+    let props = node.properties;
+    for (let i = 0; i < props.length; i++) {
+      let regionStart = i === 0 ? node.span.start.offset + 1 : props[i - 1].trailingComment ? props[i - 1].trailingComment.span.end.offset : props[i - 1].span.end.offset, regionEnd = props[i].leadingComments.length > 0 ? props[i].leadingComments[0].span.start.offset : props[i].key.span.start.offset;
+      props[i].emptyLineBefore = hasBlankLine(source, regionStart, regionEnd), attachBlankLines(props[i].value, source);
+    }
+  } else if (node.type === "Array") {
+    let elements = node.elements;
+    for (let i = 0; i < elements.length; i++) {
+      let regionStart = i === 0 ? node.span.start.offset + 1 : elements[i - 1].span.end.offset, regionEnd = elements[i].span.start.offset;
+      node.emptyLinesBefore.push(hasBlankLine(source, regionStart, regionEnd)), attachBlankLines(elements[i], source);
+    }
+  }
+}
 function attachComments(doc, comments, source) {
   let { value } = doc;
   if (comments.length === 0) return;
@@ -404,71 +433,90 @@ var escapeMap = {
 };
 
 // src/print.ts
-function print(node) {
+function print(node, options) {
+  let colors = options == null ? void 0 : options.colors;
   if (node.type === "Document") {
     let out = "";
     for (let c of node.leadingComments)
-      out += "#" + c.value + `
+      out += colorize(colors == null ? void 0 : colors.comment, "#" + c.value) + `
 `;
-    out += doPrint(node.value, 0);
+    out += doPrint(node.value, 0, colors);
     for (let c of node.trailingComments)
-      out += " #" + c.value;
+      out += " " + colorize(colors == null ? void 0 : colors.comment, "#" + c.value);
     return out;
   }
-  return doPrint(node, 0);
+  return doPrint(node, 0, colors);
 }
-function printComments(comments, indent) {
+function colorize(fn, s) {
+  return fn ? fn(s) : s;
+}
+function printComments(comments, indent, colors) {
   let out = "";
   for (let c of comments)
-    out += indent + "#" + c.value + `
+    out += indent + colorize(colors == null ? void 0 : colors.comment, "#" + c.value) + `
 `;
   return out;
 }
-function doPrint(node, level) {
+function doPrint(node, level, colors) {
   switch (node.type) {
     case "String":
-      return JSON.stringify(node.value);
+      return colorize(colors == null ? void 0 : colors.string, JSON.stringify(node.value));
     case "RawString":
-      return node.raw;
+      return colorize(colors == null ? void 0 : colors.string, node.raw);
     case "Integer":
     case "Float":
-      return node.raw;
+      return colorize(colors == null ? void 0 : colors.number, node.raw);
     case "Boolean":
-      return `${node.value}`;
+      return colorize(colors == null ? void 0 : colors.boolean, `${node.value}`);
     case "Null":
-      return "null";
+      return colorize(colors == null ? void 0 : colors.null, "null");
     case "Array": {
       let len = node.elements.length, hasComments = node.innerComments.length > 0;
-      if (len === 0 && !hasComments) return "[]";
-      let childIndent = getIndent(level + 1), parentIndent = getIndent(level), out = `[
+      if (len === 0 && !hasComments)
+        return colorize(colors == null ? void 0 : colors.bracket, "[") + colorize(colors == null ? void 0 : colors.bracket, "]");
+      let childIndent = getIndent(level + 1), parentIndent = getIndent(level), out = colorize(colors == null ? void 0 : colors.bracket, "[") + `
 `, items = [];
-      for (let el of node.elements)
-        items.push({ offset: el.span.start.offset, kind: "element", el });
+      for (let ei = 0; ei < node.elements.length; ei++) {
+        let el = node.elements[ei];
+        items.push({
+          offset: el.span.start.offset,
+          kind: "element",
+          el,
+          elIndex: ei
+        });
+      }
       for (let c of node.innerComments)
-        items.push({ offset: c.span.start.offset, kind: "comment", comment: c });
+        items.push({
+          offset: c.span.start.offset,
+          kind: "comment",
+          comment: c
+        });
       items.sort((a, b) => a.offset - b.offset);
       let first = !0;
       for (let item of items)
         first || (out += `
-`), first = !1, item.kind === "element" ? out += childIndent + doPrint(item.el, level + 1) : out += childIndent + "#" + item.comment.value;
+`, item.kind === "element" && node.emptyLinesBefore[item.elIndex] && (out += `
+`)), first = !1, item.kind === "element" ? out += childIndent + doPrint(item.el, level + 1, colors) : out += childIndent + colorize(colors == null ? void 0 : colors.comment, "#" + item.comment.value);
       return out + `
-` + parentIndent + "]";
+` + parentIndent + colorize(colors == null ? void 0 : colors.bracket, "]");
     }
     case "Object": {
       let len = node.properties.length, hasComments = node.innerComments.length > 0;
-      if (len === 0 && !hasComments) return "{}";
-      let childIndent = getIndent(level + 1), parentIndent = getIndent(level), out = `{
+      if (len === 0 && !hasComments)
+        return colorize(colors == null ? void 0 : colors.bracket, "{") + colorize(colors == null ? void 0 : colors.bracket, "}");
+      let childIndent = getIndent(level + 1), parentIndent = getIndent(level), out = colorize(colors == null ? void 0 : colors.bracket, "{") + `
 `;
       for (let i = 0; i < len; i++) {
         let prop = node.properties[i];
         i > 0 && (out += `
-`), out += printComments(prop.leadingComments, childIndent);
+`, prop.emptyLineBefore && (out += `
+`)), out += printComments(prop.leadingComments, childIndent, colors);
         let keyStr = prop.key.type === "Identifier" ? prop.key.value : JSON.stringify(prop.key.value);
-        out += childIndent + keyStr + ": " + doPrint(prop.value, level + 1), prop.trailingComment && (out += " #" + prop.trailingComment.value);
+        out += childIndent + colorize(colors == null ? void 0 : colors.key, keyStr) + colorize(colors == null ? void 0 : colors.colon, ":") + " " + doPrint(prop.value, level + 1, colors), prop.trailingComment && (out += " " + colorize(colors == null ? void 0 : colors.comment, "#" + prop.trailingComment.value));
       }
       return node.innerComments.length > 0 && (out += `
-`, out += printComments(node.innerComments, childIndent), out = out.replace(/\n$/, "")), out + `
-` + parentIndent + "}";
+`, out += printComments(node.innerComments, childIndent, colors), out = out.replace(/\n$/, "")), out + `
+` + parentIndent + colorize(colors == null ? void 0 : colors.bracket, "}");
     }
   }
 }

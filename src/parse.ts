@@ -47,6 +47,7 @@ export function parse(source: string): Document {
     span: { start: docStart, end: docEnd },
   }
   attachComments(doc, comments, source)
+  attachBlankLines(doc.value, source)
   return doc
 
   function next() {
@@ -305,6 +306,7 @@ export function parse(source: string): Document {
         span: propSpan,
         leadingComments: [],
         trailingComment: null,
+        emptyLineBefore: false,
       })
       const newlineAfterValue = skipWhitespace()
       if ((ch as string) === '}') {
@@ -367,6 +369,7 @@ export function parse(source: string): Document {
         elements,
         span: { start, end },
         innerComments: [],
+        emptyLinesBefore: [],
       }
     }
     while (true) {
@@ -382,6 +385,7 @@ export function parse(source: string): Document {
           elements,
           span: { start, end },
           innerComments: [],
+          emptyLinesBefore: [],
         }
       } else if ((ch as string) === ',') {
         next()
@@ -394,6 +398,7 @@ export function parse(source: string): Document {
             elements,
             span: { start, end },
             innerComments: [],
+            emptyLinesBefore: [],
           }
         }
       } else if (newLineAfterValue) {
@@ -518,6 +523,48 @@ function hasNewlineBetween(source: string, from: number, to: number): boolean {
     if (source[i] === '\n') return true
   }
   return false
+}
+
+function hasBlankLine(source: string, from: number, to: number): boolean {
+  let afterNewline = false
+  for (let i = from; i < to; i++) {
+    if (source[i] === '\n') {
+      if (afterNewline) return true
+      afterNewline = true
+    } else if (source[i] !== ' ' && source[i] !== '\t' && source[i] !== '\r') {
+      afterNewline = false
+    }
+  }
+  return false
+}
+
+function attachBlankLines(node: ValueNode, source: string) {
+  if (node.type === 'Object') {
+    const props = node.properties
+    for (let i = 0; i < props.length; i++) {
+      const regionStart =
+        i === 0
+          ? node.span.start.offset + 1
+          : props[i - 1].trailingComment
+            ? props[i - 1].trailingComment!.span.end.offset
+            : props[i - 1].span.end.offset
+      const regionEnd =
+        props[i].leadingComments.length > 0
+          ? props[i].leadingComments[0].span.start.offset
+          : props[i].key.span.start.offset
+      props[i].emptyLineBefore = hasBlankLine(source, regionStart, regionEnd)
+      attachBlankLines(props[i].value, source)
+    }
+  } else if (node.type === 'Array') {
+    const elements = node.elements
+    for (let i = 0; i < elements.length; i++) {
+      const regionStart =
+        i === 0 ? node.span.start.offset + 1 : elements[i - 1].span.end.offset
+      const regionEnd = elements[i].span.start.offset
+      node.emptyLinesBefore.push(hasBlankLine(source, regionStart, regionEnd))
+      attachBlankLines(elements[i], source)
+    }
+  }
 }
 
 function attachComments(
