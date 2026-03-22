@@ -28,8 +28,8 @@ export function print(
       out += colorize(colors?.comment, '#' + c.value) + '\n'
     }
     out += doPrint(node.value, 0, colors)
-    for (const c of node.trailingComments) {
-      out += ' ' + colorize(colors?.comment, '#' + c.value)
+    for (const c of node.danglingComments) {
+      out += '\n' + colorize(colors?.comment, '#' + c.value)
     }
     return out
   }
@@ -91,8 +91,7 @@ function doPrint(node: ValueNode, level: number, colors?: PrintColors): string {
         out += childIndent + doPrint(el.value, level + 1, colors)
 
         if (el.trailingComment) {
-          out +=
-            ' ' + colorize(colors?.comment, '#' + el.trailingComment.value)
+          out += ' ' + colorize(colors?.comment, '#' + el.trailingComment.value)
         }
       }
 

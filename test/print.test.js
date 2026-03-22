@@ -67,8 +67,8 @@ describe('print', () => {
       expect(print(parse('# header\n42'))).toBe('# header\n42')
     })
 
-    test('document trailing comment', () => {
-      expect(print(parse('42 # end'))).toBe('42 # end')
+    test('document dangling comment', () => {
+      expect(print(parse('42 # end'))).toBe('42\n# end')
     })
 
     test('object leading comments', () => {
@@ -209,9 +209,9 @@ describe('print', () => {
       )
     })
 
-    test('document trailing comment', () => {
+    test('document dangling comment', () => {
       expect(print(parse('42 # end'), { colors: allColors })).toBe(
-        '<n>42</n> <c># end</c>',
+        '<n>42</n>\n<c># end</c>',
       )
     })
 

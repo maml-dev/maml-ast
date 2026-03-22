@@ -44,7 +44,7 @@ export function parse(source: string): Document {
     type: 'Document',
     value: value!,
     leadingComments: [],
-    trailingComments: [],
+    danglingComments: [],
     span: { start: docStart, end: docEnd },
   }
   attachComments(doc, comments, source)
@@ -593,7 +593,7 @@ function attachComments(
     if (c.span.start.offset < valueStart) {
       doc.leadingComments.push(c)
     } else if (c.span.start.offset >= valueEnd) {
-      doc.trailingComments.push(c)
+      doc.danglingComments.push(c)
     } else {
       inside.push(c)
     }

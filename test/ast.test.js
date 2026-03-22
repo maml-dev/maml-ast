@@ -7,7 +7,7 @@ describe('document', () => {
     expect(doc.type).toBe('Document')
     expect(doc.value.type).toBe('Integer')
     expect(doc.leadingComments).toStrictEqual([])
-    expect(doc.trailingComments).toStrictEqual([])
+    expect(doc.danglingComments).toStrictEqual([])
   })
 
   test('document span covers entire source', () => {
@@ -228,10 +228,10 @@ describe('comment attachment', () => {
       expect(doc.leadingComments[0].value).toBe(' header')
     })
 
-    test('trailing comment', () => {
+    test('dangling comment', () => {
       const doc = parse('42 # end')
-      expect(doc.trailingComments.length).toBe(1)
-      expect(doc.trailingComments[0].value).toBe(' end')
+      expect(doc.danglingComments.length).toBe(1)
+      expect(doc.danglingComments[0].value).toBe(' end')
     })
 
     test('multiple leading comments', () => {
@@ -242,7 +242,7 @@ describe('comment attachment', () => {
     test('no comments', () => {
       const doc = parse('42')
       expect(doc.leadingComments).toStrictEqual([])
-      expect(doc.trailingComments).toStrictEqual([])
+      expect(doc.danglingComments).toStrictEqual([])
     })
   })
 

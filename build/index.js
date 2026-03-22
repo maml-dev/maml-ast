@@ -11,7 +11,7 @@ function parse(source) {
     type: "Document",
     value,
     leadingComments: [],
-    trailingComments: [],
+    danglingComments: [],
     span: { start: docStart, end: docEnd }
   };
   return attachComments(doc, comments, source), attachBlankLines(doc.value, source), doc;
@@ -367,7 +367,7 @@ function attachComments(doc, comments, source) {
   if (comments.length === 0) return;
   let valueStart = value.span.start.offset, valueEnd = value.span.end.offset, inside = [];
   for (let c of comments)
-    c.span.start.offset < valueStart ? doc.leadingComments.push(c) : c.span.start.offset >= valueEnd ? doc.trailingComments.push(c) : inside.push(c);
+    c.span.start.offset < valueStart ? doc.leadingComments.push(c) : c.span.start.offset >= valueEnd ? doc.danglingComments.push(c) : inside.push(c);
   inside.length > 0 && distributeComments(value, inside, source);
 }
 function distributeComments(node, comments, source) {
@@ -461,8 +461,9 @@ function print(node, options) {
       out += colorize(colors == null ? void 0 : colors.comment, "#" + c.value) + `
 `;
     out += doPrint(node.value, 0, colors);
-    for (let c of node.trailingComments)
-      out += " " + colorize(colors == null ? void 0 : colors.comment, "#" + c.value);
+    for (let c of node.danglingComments)
+      out += `
+` + colorize(colors == null ? void 0 : colors.comment, "#" + c.value);
     return out;
   }
   return doPrint(node, 0, colors);

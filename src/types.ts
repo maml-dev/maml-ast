@@ -107,6 +107,6 @@ export interface Document {
   type: 'Document'
   value: ValueNode
   leadingComments: CommentNode[]
-  trailingComments: CommentNode[]
+  danglingComments: CommentNode[]
   span: Span
 }
