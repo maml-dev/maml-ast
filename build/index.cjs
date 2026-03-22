@@ -248,13 +248,17 @@ function parse(source) {
         type: "Array",
         elements,
         span: { start, end },
-        innerComments: [],
-        emptyLinesBefore: []
+        innerComments: []
       };
     }
     for (; ; ) {
       let value2 = parseValue();
-      expectValue(value2), elements.push(value2);
+      expectValue(value2), elements.push({
+        value: value2,
+        leadingComments: [],
+        trailingComment: null,
+        emptyLineBefore: !1
+      });
       let newLineAfterValue = skipWhitespace();
       if (ch === "]") {
         next();
@@ -263,8 +267,7 @@ function parse(source) {
           type: "Array",
           elements,
           span: { start, end },
-          innerComments: [],
-          emptyLinesBefore: []
+          innerComments: []
         };
       } else if (ch === ",") {
         if (next(), skipWhitespace(), ch === "]") {
@@ -274,8 +277,7 @@ function parse(source) {
             type: "Array",
             elements,
             span: { start, end },
-            innerComments: [],
-            emptyLinesBefore: []
+            innerComments: []
           };
         }
       } else {
@@ -380,8 +382,8 @@ function attachBlankLines(node, source) {
   } else if (node.type === "Array") {
     let elements = node.elements;
     for (let i = 0; i < elements.length; i++) {
-      let regionStart = i === 0 ? node.span.start.offset + 1 : elements[i - 1].span.end.offset, regionEnd = elements[i].span.start.offset;
-      node.emptyLinesBefore.push(hasBlankLine(source, regionStart, regionEnd)), attachBlankLines(elements[i], source);
+      let regionStart = i === 0 ? node.span.start.offset + 1 : elements[i - 1].trailingComment ? elements[i - 1].trailingComment.span.end.offset : elements[i - 1].value.span.end.offset, regionEnd = elements[i].leadingComments.length > 0 ? elements[i].leadingComments[0].span.start.offset : elements[i].value.span.start.offset;
+      elements[i].emptyLineBefore = hasBlankLine(source, regionStart, regionEnd), attachBlankLines(elements[i].value, source);
     }
   }
 }
@@ -439,11 +441,29 @@ function distributeToArray(node, comments, source) {
   for (let c of comments) {
     let nested = !1;
     for (let el of elements)
-      if (c.span.start.offset >= el.span.start.offset && c.span.start.offset < el.span.end.offset) {
-        distributeComments(el, [c], source), nested = !0;
+      if (c.span.start.offset >= el.value.span.start.offset && c.span.start.offset < el.value.span.end.offset) {
+        distributeComments(el.value, [c], source), nested = !0;
         break;
       }
-    nested || node.innerComments.push(c);
+    if (nested) continue;
+    let attached = !1;
+    for (let el of elements)
+      if (c.span.start.offset > el.value.span.end.offset && !hasNewlineBetween(
+        source,
+        el.value.span.start.offset,
+        c.span.start.offset
+      )) {
+        el.trailingComment = c, attached = !0;
+        break;
+      }
+    if (!attached) {
+      for (let el of elements)
+        if (c.span.start.offset < el.value.span.start.offset) {
+          el.leadingComments.push(c), attached = !0;
+          break;
+        }
+      attached || node.innerComments.push(c);
+    }
   }
 }
 var escapeMap = {
@@ -500,29 +520,15 @@ function doPrint(node, level, colors) {
       if (len === 0 && !hasComments)
         return colorize(colors == null ? void 0 : colors.bracket, "[") + colorize(colors == null ? void 0 : colors.bracket, "]");
       let childIndent = getIndent(level + 1), parentIndent = getIndent(level), out = colorize(colors == null ? void 0 : colors.bracket, "[") + `
-`, items = [];
-      for (let ei = 0; ei < node.elements.length; ei++) {
-        let el = node.elements[ei];
-        items.push({
-          offset: el.span.start.offset,
-          kind: "element",
-          el,
-          elIndex: ei
-        });
+`;
+      for (let i = 0; i < len; i++) {
+        let el = node.elements[i];
+        i > 0 && (out += `
+`, el.emptyLineBefore && (out += `
+`)), out += printComments(el.leadingComments, childIndent, colors), out += childIndent + doPrint(el.value, level + 1, colors), el.trailingComment && (out += " " + colorize(colors == null ? void 0 : colors.comment, "#" + el.trailingComment.value));
       }
-      for (let c of node.innerComments)
-        items.push({
-          offset: c.span.start.offset,
-          kind: "comment",
-          comment: c
-        });
-      items.sort((a, b) => a.offset - b.offset);
-      let first = !0;
-      for (let item of items)
-        first || (out += `
-`, item.kind === "element" && node.emptyLinesBefore[item.elIndex] && (out += `
-`)), first = !1, item.kind === "element" ? out += childIndent + doPrint(item.el, level + 1, colors) : out += childIndent + colorize(colors == null ? void 0 : colors.comment, "#" + item.comment.value);
-      return out + `
+      return node.innerComments.length > 0 && (out += `
+`, out += printComments(node.innerComments, childIndent, colors), out = out.replace(/\n$/, "")), out + `
 ` + parentIndent + colorize(colors == null ? void 0 : colors.bracket, "]");
     }
     case "Object": {
@@ -562,7 +568,7 @@ function toValue(node) {
     case "Null":
       return null;
     case "Array":
-      return node.elements.map(toValue);
+      return node.elements.map((el) => toValue(el.value));
     case "Object": {
       let obj = {};
       for (let prop of node.properties)

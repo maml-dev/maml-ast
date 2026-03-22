@@ -10,6 +10,7 @@ import type {
   NullNode,
   ObjectNode,
   ArrayNode,
+  Element,
   IdentifierKey,
   KeyNode,
   Property,
@@ -360,7 +361,7 @@ export function parse(source: string): Document {
     const start = here()
     next()
     skipWhitespace()
-    const elements: ValueNode[] = []
+    const elements: Element[] = []
     if ((ch as string) === ']') {
       next()
       const end = here()
@@ -369,13 +370,17 @@ export function parse(source: string): Document {
         elements,
         span: { start, end },
         innerComments: [],
-        emptyLinesBefore: [],
       }
     }
     while (true) {
       const value = parseValue()
       expectValue(value)
-      elements.push(value!)
+      elements.push({
+        value: value!,
+        leadingComments: [],
+        trailingComment: null,
+        emptyLineBefore: false,
+      })
       const newLineAfterValue = skipWhitespace()
       if ((ch as string) === ']') {
         next()
@@ -385,7 +390,6 @@ export function parse(source: string): Document {
           elements,
           span: { start, end },
           innerComments: [],
-          emptyLinesBefore: [],
         }
       } else if ((ch as string) === ',') {
         next()
@@ -398,7 +402,6 @@ export function parse(source: string): Document {
             elements,
             span: { start, end },
             innerComments: [],
-            emptyLinesBefore: [],
           }
         }
       } else if (newLineAfterValue) {
@@ -559,10 +562,17 @@ function attachBlankLines(node: ValueNode, source: string) {
     const elements = node.elements
     for (let i = 0; i < elements.length; i++) {
       const regionStart =
-        i === 0 ? node.span.start.offset + 1 : elements[i - 1].span.end.offset
-      const regionEnd = elements[i].span.start.offset
-      node.emptyLinesBefore.push(hasBlankLine(source, regionStart, regionEnd))
-      attachBlankLines(elements[i], source)
+        i === 0
+          ? node.span.start.offset + 1
+          : elements[i - 1].trailingComment
+            ? elements[i - 1].trailingComment!.span.end.offset
+            : elements[i - 1].value.span.end.offset
+      const regionEnd =
+        elements[i].leadingComments.length > 0
+          ? elements[i].leadingComments[0].span.start.offset
+          : elements[i].value.span.start.offset
+      elements[i].emptyLineBefore = hasBlankLine(source, regionStart, regionEnd)
+      attachBlankLines(elements[i].value, source)
     }
   }
 }
@@ -680,17 +690,45 @@ function distributeToArray(
     let nested = false
     for (const el of elements) {
       if (
-        c.span.start.offset >= el.span.start.offset &&
-        c.span.start.offset < el.span.end.offset
+        c.span.start.offset >= el.value.span.start.offset &&
+        c.span.start.offset < el.value.span.end.offset
       ) {
-        distributeComments(el, [c], source)
+        distributeComments(el.value, [c], source)
         nested = true
         break
       }
     }
     if (nested) continue
 
-    // For arrays, all non-nested comments go to innerComments
+    // Try to attach as trailing comment (on same line as element's value)
+    let attached = false
+    for (const el of elements) {
+      if (
+        c.span.start.offset > el.value.span.end.offset &&
+        !hasNewlineBetween(
+          source,
+          el.value.span.start.offset,
+          c.span.start.offset,
+        )
+      ) {
+        el.trailingComment = c
+        attached = true
+        break
+      }
+    }
+    if (attached) continue
+
+    // Try to attach as leading comment (before next element)
+    for (const el of elements) {
+      if (c.span.start.offset < el.value.span.start.offset) {
+        el.leadingComments.push(c)
+        attached = true
+        break
+      }
+    }
+    if (attached) continue
+
+    // Dangling comment (after last element, before closing bracket)
     node.innerComments.push(c)
   }
 }

@@ -10,6 +10,7 @@ export type {
   NullNode,
   ObjectNode,
   ArrayNode,
+  Element,
   IdentifierKey,
   KeyNode,
   Property,
@@ -34,7 +35,7 @@ export function toValue(node: ValueNode | Document): any {
     case 'Null':
       return null
     case 'Array':
-      return node.elements.map(toValue)
+      return node.elements.map((el) => toValue(el.value))
     case 'Object': {
       const obj: Record<string, any> = {}
       for (const prop of node.properties) {

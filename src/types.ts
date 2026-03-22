@@ -79,12 +79,18 @@ export interface ObjectNode {
   innerComments: CommentNode[]
 }
 
+export interface Element {
+  value: ValueNode
+  leadingComments: CommentNode[]
+  trailingComment: CommentNode | null
+  emptyLineBefore: boolean
+}
+
 export interface ArrayNode {
   type: 'Array'
-  elements: ValueNode[]
+  elements: Element[]
   span: Span
   innerComments: CommentNode[]
-  emptyLinesBefore: boolean[]
 }
 
 export type ValueNode =

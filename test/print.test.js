@@ -91,9 +91,19 @@ describe('print', () => {
       expect(print(parse(input))).toBe('{\n  a: 1\n  # end\n}')
     })
 
-    test('array comments', () => {
+    test('array trailing comments', () => {
       const input = '[\n  1 # one\n  2 # two\n]'
-      expect(print(parse(input))).toBe('[\n  1\n  # one\n  2\n  # two\n]')
+      expect(print(parse(input))).toBe('[\n  1 # one\n  2 # two\n]')
+    })
+
+    test('array leading comments', () => {
+      const input = '[\n  # first\n  1\n  2\n]'
+      expect(print(parse(input))).toBe('[\n  # first\n  1\n  2\n]')
+    })
+
+    test('array inner comments', () => {
+      const input = '[\n  1\n  # end\n]'
+      expect(print(parse(input))).toBe('[\n  1\n  # end\n]')
     })
   })
 
@@ -121,6 +131,11 @@ describe('print', () => {
     test('array no blank line between elements', () => {
       const input = '[\n  1\n  2\n  3\n]'
       expect(print(parse(input))).toBe('[\n  1\n  2\n  3\n]')
+    })
+
+    test('array blank line before comment', () => {
+      const input = '[\n  1\n\n  # section\n  2\n]'
+      expect(print(parse(input))).toBe('[\n  1\n\n  # section\n  2\n]')
     })
   })
 
@@ -221,10 +236,24 @@ describe('print', () => {
       )
     })
 
-    test('array inner comment', () => {
+    test('array trailing comment', () => {
       const input = '[\n  1 # c\n]'
       expect(print(parse(input), { colors: allColors })).toBe(
-        '<br>[</br>\n  <n>1</n>\n  <c># c</c>\n<br>]</br>',
+        '<br>[</br>\n  <n>1</n> <c># c</c>\n<br>]</br>',
+      )
+    })
+
+    test('array leading comment', () => {
+      const input = '[\n  # c\n  1\n]'
+      expect(print(parse(input), { colors: allColors })).toBe(
+        '<br>[</br>\n  <c># c</c>\n  <n>1</n>\n<br>]</br>',
+      )
+    })
+
+    test('array inner comment', () => {
+      const input = '[\n  1\n  # end\n]'
+      expect(print(parse(input), { colors: allColors })).toBe(
+        '<br>[</br>\n  <n>1</n>\n  <c># end</c>\n<br>]</br>',
       )
     })
 

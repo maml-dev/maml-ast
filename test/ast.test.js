@@ -129,12 +129,12 @@ describe('positions', () => {
   test('array element positions', () => {
     const node = parse('[1, 2]').value
     expect(node.type).toBe('Array')
-    expect(node.elements[0].span.start).toStrictEqual({
+    expect(node.elements[0].value.span.start).toStrictEqual({
       offset: 1,
       line: 1,
       column: 2,
     })
-    expect(node.elements[1].span.start).toStrictEqual({
+    expect(node.elements[1].value.span.start).toStrictEqual({
       offset: 4,
       line: 1,
       column: 5,
@@ -292,10 +292,27 @@ describe('comment attachment', () => {
   })
 
   describe('array', () => {
-    test('comments go to innerComments', () => {
+    test('trailing comment on element', () => {
       const doc = parse('[\n  1 # one\n  2 # two\n]')
       const arr = doc.value
-      expect(arr.innerComments.length).toBe(2)
+      expect(arr.elements[0].trailingComment.value).toBe(' one')
+      expect(arr.elements[1].trailingComment.value).toBe(' two')
+      expect(arr.innerComments.length).toBe(0)
+    })
+
+    test('leading comment on element', () => {
+      const doc = parse('[\n  # first\n  1\n  2\n]')
+      const arr = doc.value
+      expect(arr.elements[0].leadingComments.length).toBe(1)
+      expect(arr.elements[0].leadingComments[0].value).toBe(' first')
+      expect(arr.elements[1].leadingComments.length).toBe(0)
+    })
+
+    test('inner comment (dangling)', () => {
+      const doc = parse('[\n  1\n  # end\n]')
+      const arr = doc.value
+      expect(arr.innerComments.length).toBe(1)
+      expect(arr.innerComments[0].value).toBe(' end')
     })
 
     test('inner comment in empty array', () => {
@@ -309,9 +326,24 @@ describe('comment attachment', () => {
       const doc = parse('[\n  {\n    # nested\n    a: 1\n  }\n]')
       const arr = doc.value
       expect(arr.innerComments.length).toBe(0)
-      const obj = arr.elements[0]
+      const obj = arr.elements[0].value
       expect(obj.properties[0].leadingComments.length).toBe(1)
       expect(obj.properties[0].leadingComments[0].value).toBe(' nested')
+    })
+
+    test('leading and trailing on same element', () => {
+      const doc = parse('[\n  # lead\n  1 # trail\n]')
+      const el = doc.value.elements[0]
+      expect(el.leadingComments.length).toBe(1)
+      expect(el.leadingComments[0].value).toBe(' lead')
+      expect(el.trailingComment.value).toBe(' trail')
+    })
+
+    test('comments between elements', () => {
+      const doc = parse('[\n  1 # after 1\n  # before 2\n  2\n]')
+      const els = doc.value.elements
+      expect(els[0].trailingComment.value).toBe(' after 1')
+      expect(els[1].leadingComments[0].value).toBe(' before 2')
     })
   })
 })
@@ -349,25 +381,34 @@ describe('blank lines', () => {
   describe('array', () => {
     test('blank line between elements', () => {
       const doc = parse('[\n  1\n\n  2\n]')
-      const arr = doc.value
-      expect(arr.emptyLinesBefore).toStrictEqual([false, true])
+      const els = doc.value.elements
+      expect(els[0].emptyLineBefore).toBe(false)
+      expect(els[1].emptyLineBefore).toBe(true)
     })
 
     test('no blank line between elements', () => {
       const doc = parse('[\n  1\n  2\n]')
-      const arr = doc.value
-      expect(arr.emptyLinesBefore).toStrictEqual([false, false])
+      const els = doc.value.elements
+      expect(els[0].emptyLineBefore).toBe(false)
+      expect(els[1].emptyLineBefore).toBe(false)
     })
 
     test('nested array blank lines', () => {
       const doc = parse('[\n  [\n    1\n\n    2\n  ]\n]')
-      const inner = doc.value.elements[0]
-      expect(inner.emptyLinesBefore).toStrictEqual([false, true])
+      const inner = doc.value.elements[0].value
+      expect(inner.elements[0].emptyLineBefore).toBe(false)
+      expect(inner.elements[1].emptyLineBefore).toBe(true)
     })
 
-    test('empty array has no emptyLinesBefore', () => {
+    test('empty array has no elements', () => {
       const doc = parse('[]')
-      expect(doc.value.emptyLinesBefore).toStrictEqual([])
+      expect(doc.value.elements).toStrictEqual([])
+    })
+
+    test('blank line before comment group', () => {
+      const doc = parse('[\n  1\n\n  # section\n  2\n]')
+      const els = doc.value.elements
+      expect(els[1].emptyLineBefore).toBe(true)
     })
   })
 })

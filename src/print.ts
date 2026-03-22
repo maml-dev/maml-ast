@@ -78,51 +78,31 @@ function doPrint(node: ValueNode, level: number, colors?: PrintColors): string {
 
       const childIndent = getIndent(level + 1)
       const parentIndent = getIndent(level)
-
       let out = colorize(colors?.bracket, '[') + '\n'
 
-      // Build a list of elements and comments, sorted by position
-      const items: {
-        offset: number
-        kind: 'element' | 'comment'
-        el?: ValueNode
-        comment?: CommentNode
-        elIndex?: number
-      }[] = []
-      for (let ei = 0; ei < node.elements.length; ei++) {
-        const el = node.elements[ei]
-        items.push({
-          offset: el.span.start.offset,
-          kind: 'element',
-          el,
-          elIndex: ei,
-        })
-      }
-      for (const c of node.innerComments) {
-        items.push({
-          offset: c.span.start.offset,
-          kind: 'comment',
-          comment: c,
-        })
-      }
-      items.sort((a, b) => a.offset - b.offset)
+      for (let i = 0; i < len; i++) {
+        const el = node.elements[i]
 
-      let first = true
-      for (const item of items) {
-        if (!first) {
+        if (i > 0) {
           out += '\n'
-          if (item.kind === 'element' && node.emptyLinesBefore[item.elIndex!]) {
-            out += '\n'
-          }
+          if (el.emptyLineBefore) out += '\n'
         }
-        first = false
-        if (item.kind === 'element') {
-          out += childIndent + doPrint(item.el!, level + 1, colors)
-        } else {
+        out += printComments(el.leadingComments, childIndent, colors)
+        out += childIndent + doPrint(el.value, level + 1, colors)
+
+        if (el.trailingComment) {
           out +=
-            childIndent + colorize(colors?.comment, '#' + item.comment!.value)
+            ' ' + colorize(colors?.comment, '#' + el.trailingComment.value)
         }
       }
+
+      // Inner comments (after last element, before closing bracket)
+      if (node.innerComments.length > 0) {
+        out += '\n'
+        out += printComments(node.innerComments, childIndent, colors)
+        out = out.replace(/\n$/, '')
+      }
+
       return out + '\n' + parentIndent + colorize(colors?.bracket, ']')
     }
 
