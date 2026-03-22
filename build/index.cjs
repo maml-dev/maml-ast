@@ -486,8 +486,8 @@ function doPrint(node, level) {
 `;
       for (let i = 0; i < len; i++) {
         let prop = node.properties[i];
-        out += printComments(prop.leadingComments, childIndent), i > 0 && prop.leadingComments.length === 0 && (out += `
-`);
+        i > 0 && (out += `
+`), out += printComments(prop.leadingComments, childIndent);
         let keyStr = prop.key.type === "Identifier" ? prop.key.value : JSON.stringify(prop.key.value);
         out += childIndent + keyStr + ": " + doPrint(prop.value, level + 1), prop.trailingComment && (out += " #" + prop.trailingComment.value);
       }

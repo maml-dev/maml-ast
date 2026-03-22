@@ -93,9 +93,8 @@ function doPrint(node: ValueNode, level: number): string {
         const prop = node.properties[i]
 
         // Leading comments for this property
+        if (i > 0) out += '\n'
         out += printComments(prop.leadingComments, childIndent)
-
-        if (i > 0 && prop.leadingComments.length === 0) out += '\n'
 
         const keyStr =
           prop.key.type === 'Identifier'
