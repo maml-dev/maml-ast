@@ -64,7 +64,7 @@ export interface ObjectNode {
     type: 'Object';
     properties: Property[];
     span: Span;
-    innerComments: CommentNode[];
+    danglingComments: CommentNode[];
 }
 export interface Element {
     value: ValueNode;
@@ -76,7 +76,7 @@ export interface ArrayNode {
     type: 'Array';
     elements: Element[];
     span: Span;
-    innerComments: CommentNode[];
+    danglingComments: CommentNode[];
 }
 export type ValueNode = StringNode | RawStringNode | IntegerNode | FloatNode | BooleanNode | NullNode | ObjectNode | ArrayNode;
 export interface Document {

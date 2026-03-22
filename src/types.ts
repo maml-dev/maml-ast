@@ -76,7 +76,7 @@ export interface ObjectNode {
   type: 'Object'
   properties: Property[]
   span: Span
-  innerComments: CommentNode[]
+  danglingComments: CommentNode[]
 }
 
 export interface Element {
@@ -90,7 +90,7 @@ export interface ArrayNode {
   type: 'Array'
   elements: Element[]
   span: Span
-  innerComments: CommentNode[]
+  danglingComments: CommentNode[]
 }
 
 export type ValueNode =

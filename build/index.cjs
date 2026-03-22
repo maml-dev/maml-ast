@@ -174,7 +174,7 @@ function parse(source) {
         type: "Object",
         properties,
         span: { start, end },
-        innerComments: []
+        danglingComments: []
       };
     }
     for (; ; ) {
@@ -205,7 +205,7 @@ function parse(source) {
           type: "Object",
           properties,
           span: { start, end },
-          innerComments: []
+          danglingComments: []
         };
       } else if (ch === ",") {
         if (next(), skipWhitespace(), ch === "}") {
@@ -215,7 +215,7 @@ function parse(source) {
             type: "Object",
             properties,
             span: { start, end },
-            innerComments: []
+            danglingComments: []
           };
         }
       } else {
@@ -248,7 +248,7 @@ function parse(source) {
         type: "Array",
         elements,
         span: { start, end },
-        innerComments: []
+        danglingComments: []
       };
     }
     for (; ; ) {
@@ -267,7 +267,7 @@ function parse(source) {
           type: "Array",
           elements,
           span: { start, end },
-          innerComments: []
+          danglingComments: []
         };
       } else if (ch === ",") {
         if (next(), skipWhitespace(), ch === "]") {
@@ -277,7 +277,7 @@ function parse(source) {
             type: "Array",
             elements,
             span: { start, end },
-            innerComments: []
+            danglingComments: []
           };
         }
       } else {
@@ -401,7 +401,7 @@ function distributeComments(node, comments, source) {
 function distributeToObject(node, comments, source) {
   let props = node.properties;
   if (props.length === 0) {
-    node.innerComments = comments;
+    node.danglingComments = comments;
     return;
   }
   for (let c of comments) {
@@ -428,14 +428,14 @@ function distributeToObject(node, comments, source) {
           prop.leadingComments.push(c), attached = !0;
           break;
         }
-      attached || node.innerComments.push(c);
+      attached || node.danglingComments.push(c);
     }
   }
 }
 function distributeToArray(node, comments, source) {
   let elements = node.elements;
   if (elements.length === 0) {
-    node.innerComments = comments;
+    node.danglingComments = comments;
     return;
   }
   for (let c of comments) {
@@ -462,7 +462,7 @@ function distributeToArray(node, comments, source) {
           el.leadingComments.push(c), attached = !0;
           break;
         }
-      attached || node.innerComments.push(c);
+      attached || node.danglingComments.push(c);
     }
   }
 }
@@ -516,7 +516,7 @@ function doPrint(node, level, colors) {
     case "Null":
       return colorize(colors == null ? void 0 : colors.null, "null");
     case "Array": {
-      let len = node.elements.length, hasComments = node.innerComments.length > 0;
+      let len = node.elements.length, hasComments = node.danglingComments.length > 0;
       if (len === 0 && !hasComments)
         return colorize(colors == null ? void 0 : colors.bracket, "[") + colorize(colors == null ? void 0 : colors.bracket, "]");
       let childIndent = getIndent(level + 1), parentIndent = getIndent(level), out = colorize(colors == null ? void 0 : colors.bracket, "[") + `
@@ -527,12 +527,12 @@ function doPrint(node, level, colors) {
 `, el.emptyLineBefore && (out += `
 `)), out += printComments(el.leadingComments, childIndent, colors), out += childIndent + doPrint(el.value, level + 1, colors), el.trailingComment && (out += " " + colorize(colors == null ? void 0 : colors.comment, "#" + el.trailingComment.value));
       }
-      return node.innerComments.length > 0 && (out += `
-`, out += printComments(node.innerComments, childIndent, colors), out = out.replace(/\n$/, "")), out + `
+      return node.danglingComments.length > 0 && (out += `
+`, out += printComments(node.danglingComments, childIndent, colors), out = out.replace(/\n$/, "")), out + `
 ` + parentIndent + colorize(colors == null ? void 0 : colors.bracket, "]");
     }
     case "Object": {
-      let len = node.properties.length, hasComments = node.innerComments.length > 0;
+      let len = node.properties.length, hasComments = node.danglingComments.length > 0;
       if (len === 0 && !hasComments)
         return colorize(colors == null ? void 0 : colors.bracket, "{") + colorize(colors == null ? void 0 : colors.bracket, "}");
       let childIndent = getIndent(level + 1), parentIndent = getIndent(level), out = colorize(colors == null ? void 0 : colors.bracket, "{") + `
@@ -545,8 +545,8 @@ function doPrint(node, level, colors) {
         let keyStr = prop.key.type === "Identifier" ? prop.key.value : JSON.stringify(prop.key.value);
         out += childIndent + colorize(colors == null ? void 0 : colors.key, keyStr) + colorize(colors == null ? void 0 : colors.colon, ":") + " " + doPrint(prop.value, level + 1, colors), prop.trailingComment && (out += " " + colorize(colors == null ? void 0 : colors.comment, "#" + prop.trailingComment.value));
       }
-      return node.innerComments.length > 0 && (out += `
-`, out += printComments(node.innerComments, childIndent, colors), out = out.replace(/\n$/, "")), out + `
+      return node.danglingComments.length > 0 && (out += `
+`, out += printComments(node.danglingComments, childIndent, colors), out = out.replace(/\n$/, "")), out + `
 ` + parentIndent + colorize(colors == null ? void 0 : colors.bracket, "}");
     }
   }

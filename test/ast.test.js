@@ -264,15 +264,15 @@ describe('comment attachment', () => {
     test('inner comment', () => {
       const doc = parse('{\n  a: 1\n  # end\n}')
       const obj = doc.value
-      expect(obj.innerComments.length).toBe(1)
-      expect(obj.innerComments[0].value).toBe(' end')
+      expect(obj.danglingComments.length).toBe(1)
+      expect(obj.danglingComments[0].value).toBe(' end')
     })
 
     test('inner comment in empty object', () => {
       const doc = parse('{\n  # empty\n}')
       const obj = doc.value
-      expect(obj.innerComments.length).toBe(1)
-      expect(obj.innerComments[0].value).toBe(' empty')
+      expect(obj.danglingComments.length).toBe(1)
+      expect(obj.danglingComments[0].value).toBe(' empty')
     })
 
     test('leading and trailing on same property', () => {
@@ -297,7 +297,7 @@ describe('comment attachment', () => {
       const arr = doc.value
       expect(arr.elements[0].trailingComment.value).toBe(' one')
       expect(arr.elements[1].trailingComment.value).toBe(' two')
-      expect(arr.innerComments.length).toBe(0)
+      expect(arr.danglingComments.length).toBe(0)
     })
 
     test('leading comment on element', () => {
@@ -311,21 +311,21 @@ describe('comment attachment', () => {
     test('inner comment (dangling)', () => {
       const doc = parse('[\n  1\n  # end\n]')
       const arr = doc.value
-      expect(arr.innerComments.length).toBe(1)
-      expect(arr.innerComments[0].value).toBe(' end')
+      expect(arr.danglingComments.length).toBe(1)
+      expect(arr.danglingComments[0].value).toBe(' end')
     })
 
     test('inner comment in empty array', () => {
       const doc = parse('[\n  # empty\n]')
       const arr = doc.value
-      expect(arr.innerComments.length).toBe(1)
-      expect(arr.innerComments[0].value).toBe(' empty')
+      expect(arr.danglingComments.length).toBe(1)
+      expect(arr.danglingComments[0].value).toBe(' empty')
     })
 
     test('comment inside nested object in array', () => {
       const doc = parse('[\n  {\n    # nested\n    a: 1\n  }\n]')
       const arr = doc.value
-      expect(arr.innerComments.length).toBe(0)
+      expect(arr.danglingComments.length).toBe(0)
       const obj = arr.elements[0].value
       expect(obj.properties[0].leadingComments.length).toBe(1)
       expect(obj.properties[0].leadingComments[0].value).toBe(' nested')

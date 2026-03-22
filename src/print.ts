@@ -72,7 +72,7 @@ function doPrint(node: ValueNode, level: number, colors?: PrintColors): string {
 
     case 'Array': {
       const len = node.elements.length
-      const hasComments = node.innerComments.length > 0
+      const hasComments = node.danglingComments.length > 0
       if (len === 0 && !hasComments)
         return colorize(colors?.bracket, '[') + colorize(colors?.bracket, ']')
 
@@ -97,9 +97,9 @@ function doPrint(node: ValueNode, level: number, colors?: PrintColors): string {
       }
 
       // Inner comments (after last element, before closing bracket)
-      if (node.innerComments.length > 0) {
+      if (node.danglingComments.length > 0) {
         out += '\n'
-        out += printComments(node.innerComments, childIndent, colors)
+        out += printComments(node.danglingComments, childIndent, colors)
         out = out.replace(/\n$/, '')
       }
 
@@ -108,7 +108,7 @@ function doPrint(node: ValueNode, level: number, colors?: PrintColors): string {
 
     case 'Object': {
       const len = node.properties.length
-      const hasComments = node.innerComments.length > 0
+      const hasComments = node.danglingComments.length > 0
       if (len === 0 && !hasComments)
         return colorize(colors?.bracket, '{') + colorize(colors?.bracket, '}')
 
@@ -145,9 +145,9 @@ function doPrint(node: ValueNode, level: number, colors?: PrintColors): string {
       }
 
       // Inner comments (after last property)
-      if (node.innerComments.length > 0) {
+      if (node.danglingComments.length > 0) {
         out += '\n'
-        out += printComments(node.innerComments, childIndent, colors)
+        out += printComments(node.danglingComments, childIndent, colors)
         // Remove last newline since we add one before }
         out = out.replace(/\n$/, '')
       }

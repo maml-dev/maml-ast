@@ -275,7 +275,7 @@ export function parse(source: string): Document {
         type: 'Object',
         properties,
         span: { start, end },
-        innerComments: [],
+        danglingComments: [],
       }
     }
     while (true) {
@@ -317,7 +317,7 @@ export function parse(source: string): Document {
           type: 'Object',
           properties,
           span: { start, end },
-          innerComments: [],
+          danglingComments: [],
         }
       } else if ((ch as string) === ',') {
         next()
@@ -329,7 +329,7 @@ export function parse(source: string): Document {
             type: 'Object',
             properties,
             span: { start, end },
-            innerComments: [],
+            danglingComments: [],
           }
         }
       } else if (newlineAfterValue) {
@@ -369,7 +369,7 @@ export function parse(source: string): Document {
         type: 'Array',
         elements,
         span: { start, end },
-        innerComments: [],
+        danglingComments: [],
       }
     }
     while (true) {
@@ -389,7 +389,7 @@ export function parse(source: string): Document {
           type: 'Array',
           elements,
           span: { start, end },
-          innerComments: [],
+          danglingComments: [],
         }
       } else if ((ch as string) === ',') {
         next()
@@ -401,7 +401,7 @@ export function parse(source: string): Document {
             type: 'Array',
             elements,
             span: { start, end },
-            innerComments: [],
+            danglingComments: [],
           }
         }
       } else if (newLineAfterValue) {
@@ -621,7 +621,7 @@ function distributeToObject(
   const props = node.properties
 
   if (props.length === 0) {
-    node.innerComments = comments
+    node.danglingComments = comments
     return
   }
 
@@ -669,7 +669,7 @@ function distributeToObject(
     if (attached) continue
 
     // Dangling comment (after last property, before closing brace)
-    node.innerComments.push(c)
+    node.danglingComments.push(c)
   }
 }
 
@@ -681,7 +681,7 @@ function distributeToArray(
   const elements = node.elements
 
   if (elements.length === 0) {
-    node.innerComments = comments
+    node.danglingComments = comments
     return
   }
 
@@ -729,7 +729,7 @@ function distributeToArray(
     if (attached) continue
 
     // Dangling comment (after last element, before closing bracket)
-    node.innerComments.push(c)
+    node.danglingComments.push(c)
   }
 }
 
