@@ -153,7 +153,7 @@ export function parse(source: string): Document {
         break
       } else if ((ch as string) === '\n') {
         throw new SyntaxError(errorSnippet())
-      } else if ((ch as string) < '\x20' || ch === '\x7F') {
+      } else if (((ch as string) < '\x20' && ch !== '\t') || ch === '\x7F') {
         throw new SyntaxError(errorSnippet())
       } else {
         str += ch

@@ -64,6 +64,21 @@ Keeps formatting as-is.
   })
 })
 
+describe('string control characters', () => {
+  test('allows literal tab', () => {
+    const ast = parse('"hello\tworld"')
+    expect(toValue(ast)).toBe('hello\tworld')
+  })
+
+  test('rejects control char U+001F', () => {
+    expect(() => parse('"\x1F"')).toThrow()
+  })
+
+  test('rejects DEL U+007F', () => {
+    expect(() => parse('"\x7F"')).toThrow()
+  })
+})
+
 describe('raw strings', () => {
   test('CRLF newlines', () => {
     const ast = parse('"""line1\r\nline2\r\nline3"""')
