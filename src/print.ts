@@ -55,7 +55,7 @@ function printComments(
 function doPrint(node: ValueNode, level: number, colors?: PrintColors): string {
   switch (node.type) {
     case 'String':
-      return colorize(colors?.string, JSON.stringify(node.value))
+      return colorize(colors?.string, quoteString(node.value))
 
     case 'RawString':
       return colorize(colors?.string, node.raw)
@@ -128,7 +128,7 @@ function doPrint(node: ValueNode, level: number, colors?: PrintColors): string {
         const keyStr =
           prop.key.type === 'Identifier'
             ? prop.key.value
-            : JSON.stringify(prop.key.value)
+            : quoteString(prop.key.value)
         out +=
           childIndent +
           colorize(colors?.key, keyStr) +
@@ -154,6 +154,22 @@ function doPrint(node: ValueNode, level: number, colors?: PrintColors): string {
       return out + '\n' + parentIndent + colorize(colors?.bracket, '}')
     }
   }
+}
+
+function quoteString(s: string): string {
+  let out = '"'
+  for (const c of s) {
+    const code = c.codePointAt(0)!
+    if (c === '"') out += '\\"'
+    else if (c === '\\') out += '\\\\'
+    else if (c === '\n') out += '\\n'
+    else if (c === '\r') out += '\\r'
+    else if (c === '\t') out += '\\t'
+    else if (code < 0x20 || code === 0x7f)
+      out += `\\u{${code.toString(16).toUpperCase()}}`
+    else out += c
+  }
+  return out + '"'
 }
 
 function getIndent(level: number) {

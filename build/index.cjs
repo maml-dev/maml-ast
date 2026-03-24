@@ -513,7 +513,7 @@ function printComments(comments, indent, colors) {
 function doPrint(node, level, colors) {
   switch (node.type) {
     case "String":
-      return colorize(colors == null ? void 0 : colors.string, JSON.stringify(node.value));
+      return colorize(colors == null ? void 0 : colors.string, quoteString(node.value));
     case "RawString":
       return colorize(colors == null ? void 0 : colors.string, node.raw);
     case "Integer":
@@ -550,7 +550,7 @@ function doPrint(node, level, colors) {
         i > 0 && (out += `
 `, prop.emptyLineBefore && (out += `
 `)), out += printComments(prop.leadingComments, childIndent, colors);
-        let keyStr = prop.key.type === "Identifier" ? prop.key.value : JSON.stringify(prop.key.value);
+        let keyStr = prop.key.type === "Identifier" ? prop.key.value : quoteString(prop.key.value);
         out += childIndent + colorize(colors == null ? void 0 : colors.key, keyStr) + colorize(colors == null ? void 0 : colors.colon, ":") + " " + doPrint(prop.value, level + 1, colors), prop.trailingComment && (out += " " + colorize(colors == null ? void 0 : colors.comment, "#" + prop.trailingComment.value));
       }
       return node.danglingComments.length > 0 && (out += `
@@ -558,6 +558,15 @@ function doPrint(node, level, colors) {
 ` + parentIndent + colorize(colors == null ? void 0 : colors.bracket, "}");
     }
   }
+}
+function quoteString(s) {
+  let out = '"';
+  for (let c of s) {
+    let code = c.codePointAt(0);
+    c === '"' ? out += '\\"' : c === "\\" ? out += "\\\\" : c === `
+` ? out += "\\n" : c === "\r" ? out += "\\r" : c === "	" ? out += "\\t" : code < 32 || code === 127 ? out += `\\u{${code.toString(16).toUpperCase()}}` : out += c;
+  }
+  return out + '"';
 }
 function getIndent(level) {
   return " ".repeat(2 * level);

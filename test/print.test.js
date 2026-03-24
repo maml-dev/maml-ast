@@ -44,6 +44,28 @@ describe('print', () => {
     test('raw string', () => {
       expect(print(parse('"""hello"""'))).toBe('"""hello"""')
     })
+
+    test('string with quote and backslash', () => {
+      expect(print(parse('"say \\"hi\\""'))).toBe('"say \\"hi\\""')
+      expect(print(parse('"a\\\\b"'))).toBe('"a\\\\b"')
+    })
+
+    test('string with tab', () => {
+      expect(print(parse('"hello\\tworld"'))).toBe('"hello\\tworld"')
+    })
+
+    test('string with newline and carriage return', () => {
+      expect(print(parse('"a\\nb"'))).toBe('"a\\nb"')
+      expect(print(parse('"a\\rb"'))).toBe('"a\\rb"')
+    })
+
+    test('string with control characters', () => {
+      expect(print(parse('"\\u{0}"'))).toBe('"\\u{0}"')
+      expect(print(parse('"\\u{8}"'))).toBe('"\\u{8}"')
+      expect(print(parse('"\\u{C}"'))).toBe('"\\u{C}"')
+      expect(print(parse('"\\u{1F}"'))).toBe('"\\u{1F}"')
+      expect(print(parse('"\\u{7F}"'))).toBe('"\\u{7F}"')
+    })
   })
 
   describe('containers', () => {
