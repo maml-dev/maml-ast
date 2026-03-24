@@ -11,6 +11,16 @@ describe('print', () => {
       expect(print(parse('9007199254740992'))).toBe('9007199254740992')
     })
 
+    test('64-bit max boundary', () => {
+      const I64_MAX = `${2n ** 63n - 1n}`
+      expect(print(parse(I64_MAX))).toBe(I64_MAX)
+    })
+
+    test('64-bit min boundary', () => {
+      const I64_MIN = `${-(2n ** 63n)}`
+      expect(print(parse(I64_MIN))).toBe(I64_MIN)
+    })
+
     test('float', () => {
       expect(print(parse('1.5'))).toBe('1.5')
     })

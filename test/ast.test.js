@@ -53,6 +53,22 @@ describe('node types', () => {
     expect(node.raw).toBe('9007199254740992')
   })
 
+  test('64-bit max boundary', () => {
+    const I64_MAX = 2n ** 63n - 1n
+    const node = parse(`${I64_MAX}`).value
+    expect(node.type).toBe('Integer')
+    expect(node.value).toBe(I64_MAX)
+    expect(node.raw).toBe(`${I64_MAX}`)
+  })
+
+  test('64-bit min boundary', () => {
+    const I64_MIN = -(2n ** 63n)
+    const node = parse(`${I64_MIN}`).value
+    expect(node.type).toBe('Integer')
+    expect(node.value).toBe(I64_MIN)
+    expect(node.raw).toBe(`${I64_MIN}`)
+  })
+
   test('float', () => {
     const node = parse('3.14').value
     expect(node.type).toBe('Float')
