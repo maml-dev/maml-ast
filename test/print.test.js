@@ -66,6 +66,27 @@ describe('print', () => {
       expect(print(parse('"\\u{1F}"'))).toBe('"\\u{1F}"')
       expect(print(parse('"\\u{7F}"'))).toBe('"\\u{7F}"')
     })
+
+    test('unicode scalar value boundary characters pass through as-is', () => {
+      const d7ff = String.fromCodePoint(0xD7FF)
+      expect(print(parse(`"${d7ff}"`))).toBe(`"${d7ff}"`)
+      const e000 = String.fromCodePoint(0xE000)
+      expect(print(parse(`"${e000}"`))).toBe(`"${e000}"`)
+      const sup = String.fromCodePoint(0x10000)
+      expect(print(parse(`"${sup}"`))).toBe(`"${sup}"`)
+      const max = String.fromCodePoint(0x10FFFF)
+      expect(print(parse(`"${max}"`))).toBe(`"${max}"`)
+    })
+
+    test('all control characters 0x01-0x1F except tab are escaped', () => {
+      for (let code = 1; code < 0x20; code++) {
+        if (code === 0x09) continue // tab uses \t
+        if (code === 0x0A) continue // newline uses \n
+        if (code === 0x0D) continue // CR uses \r
+        const result = print(parse(`"\\u{${code.toString(16).toUpperCase()}}"`))
+        expect(result).toBe(`"\\u{${code.toString(16).toUpperCase()}}"`)
+      }
+    })
   })
 
   describe('containers', () => {
