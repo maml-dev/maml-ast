@@ -77,6 +77,29 @@ describe('string control characters', () => {
   test('rejects DEL U+007F', () => {
     expect(() => parse('"\x7F"')).toThrow()
   })
+
+  test('unicode scalar value boundaries parse correctly', () => {
+    expect(toValue(parse('"\\u{0}"'))).toBe(String.fromCodePoint(0x0000))
+    expect(toValue(parse('"\\u{D7FF}"'))).toBe(String.fromCodePoint(0xD7FF))
+    expect(toValue(parse('"\\u{E000}"'))).toBe(String.fromCodePoint(0xE000))
+    expect(toValue(parse('"\\u{FFFF}"'))).toBe(String.fromCodePoint(0xFFFF))
+    expect(toValue(parse('"\\u{10000}"'))).toBe(String.fromCodePoint(0x10000))
+    expect(toValue(parse('"\\u{10FFFF}"'))).toBe(String.fromCodePoint(0x10FFFF))
+  })
+
+  test('surrogate code points are rejected', () => {
+    expect(() => parse('"\\u{D800}"')).toThrow('out of range')
+    expect(() => parse('"\\u{DBFF}"')).toThrow('out of range')
+    expect(() => parse('"\\u{DC00}"')).toThrow('out of range')
+    expect(() => parse('"\\u{DFFF}"')).toThrow('out of range')
+  })
+
+  test('all control characters below U+0020 are rejected unescaped (except tab)', () => {
+    for (let code = 0; code < 0x20; code++) {
+      if (code === 0x09) continue // tab is allowed
+      expect(() => parse(`"${String.fromCharCode(code)}"`)).toThrow()
+    }
+  })
 })
 
 describe('raw strings', () => {
