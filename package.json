@@ -1,6 +1,6 @@
 {
   "name": "maml-ast",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "description": "AST parser for the MAML data format",
   "type": "module",
   "main": "build/index.cjs",
