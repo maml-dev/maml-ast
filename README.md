@@ -3,7 +3,7 @@
 AST parser for the [MAML](https://maml.dev) data format. Produces a full abstract syntax tree with node types, source
 positions, and comment preservation — designed for building formatters, linters, codemods, and editor tooling.
 
-For a simpler parser that returns plain JavaScript values, see [maml.js](https://github.com/maml-dev/maml.js).
+For a simpler parser that returns plain JavaScript values, use [maml](https://www.npmjs.com/package/maml) package.
 
 - Full AST with discriminated union node types
 - Source positions (offset, line, column) on every node
