@@ -64,6 +64,29 @@ Keeps formatting as-is.
   })
 })
 
+describe('without extra symbols', () => {
+  test('true', () => {
+    const ast = parse('true')
+    expect(ast.value.type).toBe('Boolean')
+    expect(ast.value.value).toBe(true)
+    expect(toValue(ast)).toBe(true)
+  })
+
+  test('false', () => {
+    const ast = parse('false')
+    expect(ast.value.type).toBe('Boolean')
+    expect(ast.value.value).toBe(false)
+    expect(toValue(ast)).toBe(false)
+  })
+
+  test('null', () => {
+    const ast = parse('null')
+    expect(ast.value.type).toBe('Null')
+    expect(ast.value.value).toBe(null)
+    expect(toValue(ast)).toBe(null)
+  })
+})
+
 describe('string control characters', () => {
   test('allows literal tab', () => {
     const ast = parse('"hello\tworld"')
